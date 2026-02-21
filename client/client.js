@@ -1,38 +1,23 @@
-const { Delay } = require("../config");
+import { Config, sleep } from "../config";
+
+let lastLoggedTarget = null;
+let lastLogTime = 0;
 
 setTick(async () => {
-  let sleep = 1000;
-  Delay(sleep);
+  const ped = PlayerPedId();
+  if (IsPedArmed(ped, 4)) {
+    const [isAiming, target] = GetEntityPlayerIsFreeAimingAt(PlayerId());
 
-  let ped = PlayerPedId();
-  let pedArmed = false;
+    if (isAiming && IsEntityAPed(target) && IsPedAPlayer(target)) {
+      const targetServerId = GetPlayerServerId(NetworkGetPlayerIndexFromPed(target));
+      const currentTime = GetGameTimer();
 
-  if (DoesEntityExist(ped)) {
-    if ((IsPedArmed(ped), 4)) {
-      pedArmed = true;
-
-      let pedAiming,
-        target = GetEntityPlayerIsFreeAimingAt(PlayerId(-1));
-
-      if (pedAiming) {
-        if (IsEntityAPed(target) && DoesEntityExist(target)) {
-          if (IsPedAPlayer(target)) {
-            let index = NetworkGetPlayerIndexFromPed(target);
-
-            if (index) {
-              let id = GetPlayerServerId(target);
-
-              if (id > 0 && id) {
-                emitNet("blankyNet:aimlogs:logger", id);
-              }
-            }
-          }
-        }
+      if (targetServerId !== lastLoggedTarget || (currentTime - lastLogTime) > Config.LogCooldown) {
+        emitNet("aimlogs:server:log", targetServerId);
+        lastLoggedTarget = targetServerId;
+        lastLogTime = currentTime;
       }
     }
   }
-
-  if (!pedArmed) {
-    Delay(sleep);
-  }
+  await sleep(Config.TickRate);
 });
